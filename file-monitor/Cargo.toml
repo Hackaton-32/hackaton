@@ -1,0 +1,21 @@
+[package]
+name = "file-monitor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.28", features = ["full"] }
+chrono = "0.4"
+log = "0.4"
+env_logger = "0.10"
+clap = { version = "4.3", features = ["derive"] }
+notify = "5.1"
+anyhow = "1.0"
+
+[lib]
+name = "file_monitor_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "file_monitor"
+path = "src/main.rs"
