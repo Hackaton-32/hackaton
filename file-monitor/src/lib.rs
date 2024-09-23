@@ -3,9 +3,17 @@ use chrono::{DateTime, Local};
 use log::{debug, error, info};
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
+use std::fs::{File, OpenOptions};
+use std::io::Result as IoResult;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::OpenOptionsExt as WindowsOpenOptionsExt;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::os::unix::fs::OpenOptionsExt as UnixOpenOptionsExt;
 
 pub struct FileMonitor {
     current_path: Arc<Mutex<PathBuf>>,
@@ -277,5 +285,103 @@ impl FileMonitor {
             .get(path.as_ref())
             .cloned()
             .unwrap_or_else(|| path.as_ref().to_path_buf())
+    }
+
+    pub async fn open_file<P: AsRef<Path>>(&self, path: P) -> IoResult<File> {
+        let substituted_path = self.get_substituted_path(path).await;
+
+        #[cfg(target_os = "windows")]
+        {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .attributes(WindowsOpenOptionsExt::FILE_ATTRIBUTE_HIDDEN)
+                .open(&substituted_path)
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .mode(0o600)
+                .open(&substituted_path)
+        }
+
+        #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+        {
+            File::open(&substituted_path)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use tempfile::tempdir;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_new_file_monitor() {
+        let temp_dir = tempdir().unwrap();
+        let monitor = FileMonitor::new(temp_dir.path());
+        let rt = Runtime::new().unwrap();
+
+        rt.block_on(async {
+            assert!(monitor.current_path.lock().await.exists());
+        });
+    }
+
+    #[test]
+    fn test_add_path_substitution() {
+        let temp_dir = tempdir().unwrap();
+        let monitor = FileMonitor::new(temp_dir.path());
+        let rt = Runtime::new().unwrap();
+
+        rt.block_on(async {
+            monitor
+                .add_path_substitution("/original/path", "/substituted/path")
+                .await
+                .unwrap();
+            let substitutions = monitor.path_substitutions.lock().await;
+            assert_eq!(
+                substitutions.get(Path::new("/original/path")),
+                Some(&PathBuf::from("/substituted/path"))
+            );
+        });
+    }
+
+    #[test]
+    fn test_get_substituted_path() {
+        let temp_dir = tempdir().unwrap();
+        let monitor = FileMonitor::new(temp_dir.path());
+        let rt = Runtime::new().unwrap();
+
+        rt.block_on(async {
+            monitor
+                .add_path_substitution("/original/path", "/substituted/path")
+                .await
+                .unwrap();
+            let substituted = monitor.get_substituted_path("/original/path").await;
+            assert_eq!(substituted, PathBuf::from("/substituted/path"));
+        });
+    }
+
+    #[test]
+    fn test_open_file() {
+        let temp_dir = tempdir().unwrap();
+        let monitor = FileMonitor::new(temp_dir.path());
+        let rt = Runtime::new().unwrap();
+
+        rt.block_on(async {
+            let file_path = temp_dir.path().join("test_file.txt");
+            File::create(&file_path).unwrap();
+
+            let opened_file = monitor.open_file(&file_path).await;
+            assert!(opened_file.is_ok());
+        });
     }
 }
