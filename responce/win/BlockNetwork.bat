@@ -1,0 +1,1 @@
+netsh advfirewall firewall add rule name="DefenceActiveOn" dir=in action=block protocol=any
