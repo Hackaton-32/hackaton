@@ -649,6 +649,7 @@ dependencies = [
  "rusb",
  "sha2",
  "sysinfo",
+ "tempfile",
  "tokio",
 ]
 

@@ -11,6 +11,7 @@ async-trait = "0.1.68"
 anyhow = "1.0"
 file-monitor = { path = "../file-monitor/" }
 sha2 = "0.10.8"
+tempfile = "3.3"
 
 [[bin]]
 name = "guardian"
