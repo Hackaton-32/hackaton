@@ -1,0 +1,17 @@
+[package]
+name = "observer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sysinfo = "0.29.0"
+rusb = "0.9"
+tokio = { version = "1.28", features = ["full"] }
+async-trait = "0.1.68"
+anyhow = "1.0"
+file-monitor = { path = "../file-monitor/" }
+sha2 = "0.10.8"
+
+[[bin]]
+name = "guardian"
+path = "./src/bin/guardian.rs"
