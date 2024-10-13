@@ -12,11 +12,11 @@ impl CommandHandler {
 
     pub async fn handle_command(&self, command: &str) -> Result<String> {
         match command {
-            "ALLOW_NETWORK" => self.run_script("an").await,
-            "BLOCK_NETWORK" => self.run_script("bn").await,
-            "LOCK_SCREEN" => self.run_script("sl").await,
-            "LOCK_USB" => self.run_script("lu").await,
-            "UNLOCK_USB" => self.run_script("uu").await,
+            "ALLOW_NETWORK" => self.run_script("AllowNetwork").await,
+            "BLOCK_NETWORK" => self.run_script("BlockNetwork").await,
+            "LOCK_SCREEN" => self.run_script("LockScreen").await,
+            "LOCK_USB" => self.run_script("LockUSB").await,
+            "UNLOCK_USB" => self.run_script("UnlockUSB").await,
 
             "CHECK_STATUS" => self.check_status().await,
             _ => Err(anyhow!("Unknown command: {}", command)),
